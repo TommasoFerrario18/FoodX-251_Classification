@@ -1,4 +1,4 @@
-close all;
+close all
 clear
 clc
 
@@ -18,3 +18,4 @@ toc
 tic
 val_deg_imds = load_images("..\images\val_info.csv", "..\images\val_set_degraded\", DatasetType.val_deg);
 toc
+
