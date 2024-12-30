@@ -11,14 +11,14 @@ toc
 %% Setup AlexNet
 net = alexnet;
 sz = net.Layers(1).InputSize;
-layer = "relu4";
+layer = "relu3";
 
 %% Extract features - Training set
 disp("Train Features")
 tic
 numImages = numel(train_imds.Files);
 % Preallocate arrays
-train_features = zeros(numImages, 384*13*13); % Size based on relu4 layer output
+train_features = zeros(numImages, 384*13*13); % Size based on relu3 layer output
 train_labels = zeros(numImages, 1);
 
 % Process images in batches
@@ -53,7 +53,7 @@ toc
 
 numValImages = numel(val_imds.Files);
 test_features = zeros(numValImages, 384*13*13);
-test_labels = categorical(zeros(numValImages, 1));
+test_labels = zeros(numValImages, 1);
 
 % Process validation images in batches
 tic
@@ -71,10 +71,13 @@ for i = 1:batchSize:numValImages
 end
 toc
 
-%% Classification and performance
+%% Classification
 disp("Classificazione test set")
+tic
 prediction = clf.predict(test_features);
+toc
 
+%% Performance
 disp("Misure delle performance")
 cm = confmat(test_labels, prediction);
 show_confmat(cm.cm_raw, cm.labels, cm.accuracy);
