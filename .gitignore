@@ -36,6 +36,6 @@ Thumbs.db
 .ipynb_checkpoints
 
 # Dataset personalizzati
-images/
+dataset/
 scripts/label_images
 scripts/outlier
