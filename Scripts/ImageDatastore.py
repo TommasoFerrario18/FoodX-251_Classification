@@ -5,9 +5,29 @@ from PIL import Image
 from torch.utils.data import Dataset
 
 class ImageDatastore(Dataset):
-    def __init__(self, images_directory, labels_file, transform=None, target_transform=None):
-        self.images_directory = images_directory
-        self.labels = pd.read_csv(labels_file)
+
+    dataset_path = {
+        'train': {
+            'images_directory': '../Dataset/train_set',
+            'labels_file': '../Dataset/train_small.csv'
+        },
+        'train_unlabeled': {
+            'images_directory': '../Dataset/train_set',
+            'labels_file': '../Dataset/train_unlabeled.csv'
+        },
+        'val_set': {
+            'images_directory': '../Dataset/val_set',
+            'labels_file': '../Dataset/val_info.csv'
+        },
+        'val_degradated': {
+            'images_directory': '../Dataset/val_set_degraded',
+            'labels_file': '../Dataset/val_info.csv'
+        }
+    }
+
+    def __init__(self, dataset_type, transform=None, target_transform=None):
+        self.images_directory = self.dataset_path[dataset_type]['images_directory']
+        self.labels = pd.read_csv(self.dataset_path[dataset_type]['labels_file'], header=None)
         self.transform = transform
         self.target_transform = target_transform
     
