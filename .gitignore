@@ -1,0 +1,41 @@
+# IDE e Editor
+.vscode/*
+.idea/*
+*.iws
+*.iml
+
+# Linguaggi e Ambienti
+__pycache__/
+*.py[cod]
+*.so
+*.log
+
+# Ambiente di sviluppo
+.env
+.venv
+venv/
+env/
+ENV/
+
+# Pacchetti e Distribuzione
+dist/
+build/
+*.egg-info/
+*.egg
+
+# Test e Copertura
+.coverage
+.pytest_cache/
+htmlcov/
+
+# Sistema Operativo
+Thumbs.db
+.DS_Store
+
+# Notebook e Jupyter
+.ipynb_checkpoints
+
+# Dataset personalizzati
+images/
+scripts/label_images
+scripts/outlier
