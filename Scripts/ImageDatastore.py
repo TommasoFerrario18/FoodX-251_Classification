@@ -1,8 +1,16 @@
 import os
+import torch
 import pandas as pd
 
-from PIL import Image
+from enum import Enum
+from torchvision.io import decode_image
 from torch.utils.data import Dataset
+
+class DatasetType(Enum):
+    TRAIN = 'train'
+    TRAIN_UNLABELED = 'train_unlabeled'
+    VAL_SET = 'val_set'
+    VAL_DEGRADATED = 'val_degradated'
 
 class ImageDatastore(Dataset):
 
@@ -36,8 +44,8 @@ class ImageDatastore(Dataset):
     
     def __getitem__(self, idx):
         image_path = os.path.join(self.images_directory, self.labels.iloc[idx, 0])
-        image = Image.open(image_path)
-        image = image.resize((224, 224))
+        image = decode_image(image_path)
+        image = image.type(torch.float32) / 255.0
         label = self.labels.iloc[idx, 1]
         
         if self.transform:

@@ -15,4 +15,4 @@ create_or_clear_directory('../Results/outliers')
 extractor = ExtractFeatures()
 features, labels = extractor.extract_featuresAlexNet(train_dataloader)
 
-print(f"N elements {len(features)}, N feature {len(features[0][2])}")
+# print(f"N elements {len(features)}, N feature {len(features[0][2])}")
