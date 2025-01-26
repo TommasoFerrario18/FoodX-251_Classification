@@ -40,7 +40,7 @@ class NeuralFeatureExtractor:
         features, labels = [], []
         with torch.no_grad():
             for batch, (x, y) in enumerate(imageDataloder):
-                print(f"Batch {batch}")
+                print(f"Batch {batch} / {len(imageDataloder)}", end="\r")
                 x = x.to(self.device)
                 outputs = self.model(x)
                 features.append(outputs.cpu().numpy())

@@ -37,5 +37,4 @@ Thumbs.db
 
 # Dataset personalizzati
 Dataset/
-scripts/label_images
-scripts/outlier
+Features/
