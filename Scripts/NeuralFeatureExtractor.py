@@ -106,9 +106,13 @@ class NeuralFeatureExtractor:
     def _save_features(self, features: np.ndarray, labels: List) -> None:
         """Save the features and labels to the result directory"""
         np.savetxt(
-            os.path.join(self.result_dir, "features", self.result_file), features
+            os.path.join(self.result_dir, "features", self.result_file),
+            features,
+            sep=",",
         )
-        np.savetxt(os.path.join(self.result_dir, "labels", self.result_file), labels)
+        np.savetxt(
+            os.path.join(self.result_dir, "labels", self.result_file), labels, sep=","
+        )
 
     def __del__(self):
         """Clean up hooks when the object is deleted"""

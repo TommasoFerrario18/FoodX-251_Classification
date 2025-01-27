@@ -32,16 +32,16 @@ class KNNRetrieval(ImageRetrieval):
         """Retrieve the k nearest images to the query images"""
         labels = np.zeros(len(images))
 
-        neigh = NearestNeighbors(n_neighbors=self.k, n_jobs=-1)
-        neigh.fit(images)
+        neigh = NearestNeighbors(n_neighbors=self.k, n_jobs=-1, metric="cosine")
+        neigh.fit(query_features)
 
-        distances, indices = neigh.kneighbors(query_features)
+        distances, indices = neigh.kneighbors(images)
 
-        # Get the labels of the k nearest images
-        for i, idx in enumerate(indices):
-            labels[i] = query_labels[idx]
+        # # Get the labels of the k nearest images
+        # for i, idx in enumerate(indices):
+        #     labels[i] = query_labels[idx]
 
-        return labels, distances
+        return indices, distances
 
 
 class FAISSRetrieval(ImageRetrieval):
