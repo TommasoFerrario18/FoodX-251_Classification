@@ -1,14 +1,23 @@
 import os
 import torch
 import numpy as np
+from typing import Any, List, Tuple
 
 from torchvision.models import mobilenet_v3_large, alexnet, resnet50
 
+
 class NeuralFeatureExtractor:
-    def __init__(self, model, layer, input_size, result_file=None):
-        # Model Information
+    def __init__(
+        self,
+        model: torch.nn.Module,
+        target_layer: str,
+        input_size: Tuple[int, int],
+        result_file: str = None,
+    ):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.model = self._prepare_model(model, layer)
+        self.target_layer = target_layer
+        self.features = None
+        self.hooks = []
 
         # Result Information
         self.result_file = result_file
@@ -22,74 +31,119 @@ class NeuralFeatureExtractor:
         # Input Size
         self.input_size = input_size
 
-    def _prepare_model(self, model, layer):
-        """Prepare the model by removing the layers after the specified layer"""
-        new_model_layers = []
-        for name, module in model.named_children():
-            if name == layer:
-                break
-            new_model_layers.append(module)
+        # Prepare model
+        self.model = self._prepare_model(model)
 
-        new_model = torch.nn.Sequential(*new_model_layers)
-        return new_model.to(self.device)
+    def _get_layer(self, model: torch.nn.Module, layer_name: str) -> torch.nn.Module:
+        """Get a layer from model given its name"""
+        if "." in layer_name:
+            layers = layer_name.split(".")
+            current = model
+            for layer in layers:
+                if hasattr(current, layer):
+                    current = getattr(current, layer)
+                else:
+                    raise ValueError(f"Layer {layer_name} not found in model")
+            return current
+        else:
+            if hasattr(model, layer_name):
+                return getattr(model, layer_name)
+            raise ValueError(f"Layer {layer_name} not found in model")
 
-    def compute_features(self, imageDataloder):
-        """Compute the features for the images in the imageDataloder"""
-        self.model.eval()
+    def _hook_fn(self, module: torch.nn.Module, input: Any, output: Any) -> None:
+        """Hook function to capture intermediate features"""
+        self.features = output.detach()
 
+    def _prepare_model(self, model: torch.nn.Module) -> torch.nn.Module:
+        """Prepare the model by adding hooks to the target layer"""
+        model = model.to(self.device)
+        model.eval()
+
+        # Remove any existing hooks
+        for hook in self.hooks:
+            hook.remove()
+        self.hooks = []
+
+        # Add new hook
+        target = self._get_layer(model, self.target_layer)
+        hook = target.register_forward_hook(self._hook_fn)
+        self.hooks.append(hook)
+
+        return model
+
+    def compute_features(
+        self, imageDataloader: torch.utils.data.DataLoader
+    ) -> Tuple[np.ndarray, List]:
+        """Compute the features for the images in the imageDataloader"""
         features, labels = [], []
+
         with torch.no_grad():
-            for batch, (x, y) in enumerate(imageDataloder):
-                print(f"Batch {batch} / {len(imageDataloder)}", end="\r")
+            for batch, (x, y) in enumerate(imageDataloader):
+                print(f"Batch {batch + 1} / {len(imageDataloader)}", end="\r")
                 x = x.to(self.device)
-                outputs = self.model(x)
-                features.append(outputs.cpu().numpy())
+                _ = self.model(x)  # Forward pass
+
+                if self.features is None:
+                    raise ValueError(
+                        "No features were captured. Check if the target layer name is correct."
+                    )
+
+                # Reshape features to (batch_size, -1)
+                batch_features = self.features.reshape(self.features.size(0), -1)
+                features.append(batch_features.cpu().numpy())
                 labels.append(y.cpu().numpy())
 
-        # Flatten the features and labels
-        final_feat = np.vstack(
-            [x.reshape(1, -1) for feat_group in features for x in feat_group]
-        )
-        final_lab = [
-            label for _, lab_group in zip(features, labels) for label in lab_group
-        ]
+                self.features = None  # Reset features for next batch
+
+        final_feat = np.vstack(features)
+        final_lab = np.concatenate(labels)
 
         if self.result_file is not None:
             self._save_features(final_feat, final_lab)
 
         return final_feat, final_lab
 
-    def _save_features(self, features, labels):
+    def _save_features(self, features: np.ndarray, labels: List) -> None:
         """Save the features and labels to the result directory"""
         np.savetxt(
             os.path.join(self.result_dir, "features", self.result_file), features
         )
         np.savetxt(os.path.join(self.result_dir, "labels", self.result_file), labels)
 
+    def __del__(self):
+        """Clean up hooks when the object is deleted"""
+        for hook in self.hooks:
+            hook.remove()
+
 
 class MobileNetFeatureExtractor(NeuralFeatureExtractor):
-    def __init__(self, result_file=None):
+    def __init__(self, target_layer: str = "classifier.0", result_file: str = None):
+        model = mobilenet_v3_large(weights="IMAGENET1K_V2")
         super().__init__(
-            mobilenet_v3_large(weights="IMAGENET1K_V2"),
-            "avgpool",
+            model,
+            target_layer,
             (232, 232),
             result_file,
         )
 
+
 class AlexNetFeatureExtractor(NeuralFeatureExtractor):
-    def __init__(self, result_file=None):
+    def __init__(self, target_layer: str = "features.12", result_file: str = None):
+        model = alexnet(weights="IMAGENET1K_V1")
         super().__init__(
-            alexnet(weights="IMAGENET1K_V1"),
-            "avgpool",
+            model,
+            target_layer,
             (256, 256),
             result_file,
         )
 
+
 class ResNetFeatureExtractor(NeuralFeatureExtractor):
-    def __init__(self, result_file=None):
+    def __init__(self, target_layer: str = "avgpool", result_file: str = None):
+        model = resnet50(weights="IMAGENET1K_V2")
         super().__init__(
-            resnet50(weights="IMAGENET1K_V2:"),
-            "avgpool",
+            model,
+            target_layer,
             (232, 232),
             result_file,
         )
