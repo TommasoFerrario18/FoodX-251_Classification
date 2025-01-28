@@ -21,6 +21,26 @@ class ImageDatastore(Dataset):
             "images_directory": "../Dataset/train_set",
             "labels_file": "../Dataset/train_unlabeled_0.csv",
         },
+        "train_unlabeled_1": {
+            "images_directory": "../Dataset/train_set",
+            "labels_file": "../Dataset/train_unlabeled_1.csv",
+        },
+        "train_unlabeled_2": {
+            "images_directory": "../Dataset/train_set",
+            "labels_file": "../Dataset/train_unlabeled_2.csv",
+        },
+        "train_unlabeled_3": {
+            "images_directory": "../Dataset/train_set",
+            "labels_file": "../Dataset/train_unlabeled_3.csv",
+        },
+        "train_unlabeled_4": {
+            "images_directory": "../Dataset/train_set",
+            "labels_file": "../Dataset/train_unlabeled_4.csv",
+        },
+        "train_unlabeled_5": {
+            "images_directory": "../Dataset/train_set",
+            "labels_file": "../Dataset/train_unlabeled_5.csv",
+        },
         "val_set": {
             "images_directory": "../Dataset/val_set",
             "labels_file": "../Dataset/val_info.csv",
