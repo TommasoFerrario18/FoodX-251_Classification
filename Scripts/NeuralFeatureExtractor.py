@@ -134,7 +134,7 @@ class MobileNetFeatureExtractor(NeuralFeatureExtractor):
 
 
 class AlexNetFeatureExtractor(NeuralFeatureExtractor):
-    def __init__(self, target_layer: str = "features.12", result_file: str = None):
+    def __init__(self, target_layer: str = "classifier.2", result_file: str = None):
         model = alexnet(weights="IMAGENET1K_V1")
         super().__init__(
             model,
