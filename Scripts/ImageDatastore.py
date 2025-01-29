@@ -13,6 +13,10 @@ class ImageDatastore(Dataset):
             "images_directory": "../Dataset/train_set",
             "labels_file": "../Dataset/train_small.csv",
         },
+        "train_aug": {
+            "images_directory": "../Dataset/train_set",
+            "labels_file": "../Dataset/train_augmented_3.csv",
+        },
         "train_unlabeled": {
             "images_directory": "../Dataset/train_set",
             "labels_file": "../Dataset/train_unlabeled.csv",

@@ -1,8 +1,9 @@
 import os
 import torch
 import numpy as np
-from typing import Any, List, Tuple
 
+from tqdm import tqdm
+from typing import Any, List, Tuple
 from torchvision.models import mobilenet_v3_large, alexnet, resnet50
 
 
@@ -78,8 +79,8 @@ class NeuralFeatureExtractor:
         features, labels = [], []
 
         with torch.no_grad():
-            for batch, (x, y) in enumerate(imageDataloader):
-                print(f"Batch {batch + 1} / {len(imageDataloader)}", end="\r")
+            for batch, (x, y) in tqdm(enumerate(imageDataloader)):
+                # print(f"Batch {batch + 1} / {len(imageDataloader)}", end="\r")
                 x = x.to(self.device)
                 _ = self.model(x)  # Forward pass
 
