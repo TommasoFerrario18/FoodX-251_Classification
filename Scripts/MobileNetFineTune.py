@@ -33,7 +33,6 @@ def load_data(batch_size):
             transforms.Resize(
                 (232, 232), interpolation=transforms.InterpolationMode.BILINEAR
             ),
-            transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ]
     )
@@ -66,8 +65,8 @@ def train_model(model, dataloaders, num_epochs, image_datasets):
     )
 
     for epoch in tqdm(range(num_epochs)):
-        print(f"Epoch {epoch}/{num_epochs - 1}")
-        print("-" * 10)
+        # print(f"Epoch {epoch}/{num_epochs - 1}")
+        # print("-" * 10)
 
         for phase in ["train", "val"]:
             if phase == "train":
@@ -104,6 +103,11 @@ def train_model(model, dataloaders, num_epochs, image_datasets):
         epoch_acc = running_corrects.double() / len(image_datasets[phase])
 
         print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
+        
+        if not os.path.exists("../Model"):
+            os.makedirs("../Model")
+        
+        torch.save(model.state_dict(), f"../Model/model_{epoch}.pth")
 
     return model
 

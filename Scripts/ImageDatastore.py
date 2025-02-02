@@ -15,7 +15,7 @@ class ImageDatastore(Dataset):
         },
         "train_aug": {
             "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_augmented_3.csv",
+            "labels_file": "../Dataset/train_centroid.csv",
         },
         "train_unlabeled": {
             "images_directory": "../Dataset/train_set",
