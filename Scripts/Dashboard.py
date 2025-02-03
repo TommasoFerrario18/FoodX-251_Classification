@@ -42,7 +42,14 @@ navbar = dbc.NavbarSimple(
 )
 
 retrieval_da_prescelte = html.Div([
-    html.H1("Immagini di esempio"),
+
+    html.Div([
+        html.H3("Immagini selezionate"),
+        html.Div(id='show-retrieval', style={'display': 'flex', 'justify-content': 'center', 'flex-wrap': 'wrap'})
+    ], style={'text-align': 'center', 'margin-top': '20px'}),
+
+    html.H3("Immagine originale", style={'text-align': 'center', 'margin-top': '20px'}),
+
     html.Div([
         html.Button("<", id='prev-button', n_clicks=0, style={'font-size': '20px', 'margin': '10px'}, className='btn btn-primary btn-lg'),
         html.Img(id='image-display', src=encode_image(image_paths[0]), style={'width': '400px', 'height': 'auto'}),
@@ -52,12 +59,8 @@ retrieval_da_prescelte = html.Div([
 
     html.Div([
         html.Button("Conferma", id='confirm-button', n_clicks=0, style={'font-size': '20px', 'margin-top': '20px'}, className='btn btn-primary btn-lg')
-    ], style={'text-align': 'center'}),
+    ], style={'text-align': 'center'})
 
-    html.Div([
-        html.H3("Immagini selezionate"),
-        html.Div(id='show-retrieval', style={'display': 'flex', 'justify-content': 'center', 'flex-wrap': 'wrap'})
-    ], style={'text-align': 'center', 'margin-top': '20px'})
 ])
 
 retrieval = html.Div(children=[
@@ -112,8 +115,6 @@ def update_mini_gallery(n_clicks, selected_image):
 
         df_image = pd.DataFrame({"Image": [selected_image]*20, "Label": [1]*20})
 
-        print(selected_image)
-
         if selected_image == os.path.join('..', 'Images', 'train_059364.jpg'):
            feat_image = feat_small[0:20, :]
         elif selected_image == os.path.join('..', 'Images', 'train_089424.jpg'):
@@ -130,7 +131,7 @@ def update_mini_gallery(n_clicks, selected_image):
 
         image_paths = [os.path.join(unlabel_folder, img) for img in image_files]
 
-        return [html.Img(src=encode_image(img), style={'width': '200px', 'height': 'auto', 'margin': '5px'}) for img in image_paths]
+        return [html.Img(src=encode_image(img), style={'width': '300px', 'height': '300px', 'margin': '5px'}) for img in image_paths]
     return []
 
 if __name__ == '__main__':
