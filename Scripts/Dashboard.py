@@ -33,7 +33,7 @@ app = dash.Dash(__name__, external_stylesheets=external_stylesheets, suppress_ca
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Classificazione", href="/")),
-        dbc.NavItem(dbc.NavLink("Retrieval", href="/page-1")),
+        dbc.NavItem(dbc.NavLink("Retrieval preselezionate", href="/page-1"))
     ],
     brand="Visual Dashboard",
     brand_href="/",
@@ -63,9 +63,9 @@ retrieval_da_prescelte = html.Div([
 
 ])
 
-retrieval = html.Div(children=[
+retrieval_prescelte = html.Div(children=[
     html.H1(
-        'Retrieval',
+        'Retrieval preselezionato',
         className='text-center text-primary',
         style={'font-size': '3rem', 'font-weight': 'bold', 'margin-bottom': '20px'}
     ),
@@ -73,7 +73,9 @@ retrieval = html.Div(children=[
 ])
 
 classificazione = html.Div(children=[
-    html.H1('Classificazione'),
+    html.H1('Classificazione', 
+        className='text-center text-primary',
+        style={'font-size': '3rem', 'font-weight': 'bold', 'margin-bottom': '20px'})
 ])
 
 app.layout = html.Div(children=[
@@ -92,7 +94,7 @@ app.layout = html.Div(children=[
 )
 def display_page(pathname):
     if pathname == '/page-1':
-        return retrieval
+        return retrieval_prescelte
     else:
         return classificazione
 

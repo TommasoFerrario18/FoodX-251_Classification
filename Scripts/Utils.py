@@ -40,6 +40,10 @@ def get_datasets():
 
     return df_small, feat_small, df_unlabeled, feat_unlabeled
 
+def get_validation_datasets():
+    df_degraded = pd.read_csv('../Dataset/val_info.csv')
+    return df_degraded
+
 def encode_image(image_file):
     with open(image_file, 'rb') as f:
         return 'data:image/png;base64,' + base64.b64encode(f.read()).decode('ascii')
