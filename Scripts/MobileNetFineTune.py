@@ -8,21 +8,95 @@ from ImageDatastore import ImageDatastore
 from torchvision import models, transforms
 
 
+# To unfreeze all layers if needed
+def unfreeze_all_layers(model):
+    for param in model.parameters():
+        param.requires_grad = True
+
+
+def check_frozen_status(model):
+    frozen_layers = []
+    trainable_layers = []
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            trainable_layers.append(name)
+        else:
+            frozen_layers.append(name)
+
+    print(f"Number of frozen layers: {len(frozen_layers)}")
+    print(f"Number of trainable layers: {len(trainable_layers)}")
+
+    print("\nTrainable layers:")
+    for layer in trainable_layers:
+        print(layer)
+
+
+def freeze_until_layer(model, target_layer="features.16"):
+    # Flag to track if we've reached the target layer
+    reached_target = False
+
+    # Print and freeze layers
+    for name, param in model.named_parameters():
+        if target_layer in name:
+            reached_target = True
+            param.requires_grad = False
+            continue
+
+        if not reached_target:
+            param.requires_grad = False
+        else:
+            print(f"Keeping layer trainable: {name}")
+
+
+def count_parameters_per_layer(model):
+    trainable_params_per_layer = {}
+    frozen_params_per_layer = {}
+
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            trainable_params_per_layer[name] = param.numel()
+        else:
+            frozen_params_per_layer[name] = param.numel()
+
+    print("Trainable parameters per layer:")
+    for name, count in trainable_params_per_layer.items():
+        print(f"{name}: {count:,} parameters")
+
+    print("\nFrozen parameters per layer:")
+    for name, count in frozen_params_per_layer.items():
+        print(f"{name}: {count:,} parameters")
+
+
+def count_parameters(model):
+    # Count trainable parameters
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+    # Count non-trainable parameters
+    non_trainable_params = sum(
+        p.numel() for p in model.parameters() if not p.requires_grad
+    )
+
+    # Total parameters
+    total_params = trainable_params + non_trainable_params
+
+    print(f"Trainable parameters: {trainable_params:,}")
+    print(f"Non-trainable parameters: {non_trainable_params:,}")
+    print(f"Total parameters: {total_params:,}")
+
+    return trainable_params, non_trainable_params, total_params
+
+
 def create_model(model, num_classes):
     # Replace the last layer with a new layer with num_classes output units
     model.classifier[3] = nn.Linear(model.classifier[3].in_features, num_classes)
 
-    # Conta il numero di blocchi InvertedResidual congelati
-    frozen_blocks = 0
+    # Freeze layers
+    print("\nFreezing layers:")
+    freeze_until_layer(model, "features.15")
 
-    for layer in model.features:
-        if isinstance(layer, models.mobilenetv3.InvertedResidual):
-            frozen_blocks += 1
-            for param in layer.parameters():
-                param.requires_grad = False
-            if frozen_blocks == 10:
-                break
-
+    # Check status after freezing
+    check_frozen_status(model)
     return model
 
 
@@ -37,7 +111,7 @@ def load_data(batch_size):
         ]
     )
 
-    datasets = ImageDatastore("train_aug", transform=transform)
+    datasets = ImageDatastore("train_retrieval", transform=transform)
     image_datasets = {}
 
     train, val = torch.utils.data.random_split(
@@ -103,10 +177,10 @@ def train_model(model, dataloaders, num_epochs, image_datasets):
         epoch_acc = running_corrects.double() / len(image_datasets[phase])
 
         print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
-        
+
         if not os.path.exists("../Model"):
             os.makedirs("../Model")
-        
+
         torch.save(model.state_dict(), f"../Model/model_{epoch}.pth")
 
     return model
@@ -119,15 +193,18 @@ if __name__ == "__main__":
     # Create the model
     model = create_model(model, 251)
 
+    count_parameters_per_layer(model)
+    count_parameters(model)
+
     # Load the data
-    dataloaders, image_datasets = load_data(batch_size=512)
+    # dataloaders, image_datasets = load_data(batch_size=512)
 
-    # Train the model
-    model = train_model(model, dataloaders, num_epochs=5, image_datasets=image_datasets)
+    # # Train the model
+    # model = train_model(model, dataloaders, num_epochs=5, image_datasets=image_datasets)
 
-    # Save the model
-    if not os.path.exists("../Model"):
-        os.makedirs("../Model")
+    # # Save the model
+    # if not os.path.exists("../Model"):
+    #     os.makedirs("../Model")
 
-    torch.save(model.state_dict(), "../Model/model.pth")
-    torch.save(model, "../Model/model_full.pth")
+    # torch.save(model.state_dict(), "../Model/model.pth")
+    # torch.save(model, "../Model/model_full.pth")
