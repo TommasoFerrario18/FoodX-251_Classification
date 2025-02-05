@@ -1,6 +1,9 @@
 import os
 import shutil
 from torchvision import transforms
+import pandas as pd
+import numpy as np
+import base64
 
 def create_or_clear_directory(output_folder):
 
@@ -24,3 +27,23 @@ def transform(input_size):
         ]
     )
     return transform
+
+def get_datasets():
+
+    base_feature_path = '../Features/features/'
+
+    df_small = pd.read_csv('../Dataset/train_small.csv')
+    df_unlabeled = pd.read_csv('../Dataset/train_unlabeled.csv')
+
+    feat_small = np.load(base_feature_path + 'mobilenet_v3_classifier.npy')
+    feat_unlabeled = np.load(base_feature_path + 'mobilenet_v3_classifier_unlabelled.npy')
+
+    return df_small, feat_small, df_unlabeled, feat_unlabeled
+
+def get_validation_datasets():
+    df_degraded = pd.read_csv('../Dataset/val_info.csv')
+    return df_degraded
+
+def encode_image(image_file):
+    with open(image_file, 'rb') as f:
+        return 'data:image/png;base64,' + base64.b64encode(f.read()).decode('ascii')
