@@ -13,37 +13,13 @@ class ImageDatastore(Dataset):
             "images_directory": "../Dataset/train_set",
             "labels_file": "../Dataset/train_small.csv",
         },
-        "train_aug": {
+        "train_retrieval": {
             "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_augmented_3.csv",
+            "labels_file": "../Dataset/train_retrieval.csv",
         },
         "train_unlabeled": {
             "images_directory": "../Dataset/train_set",
             "labels_file": "../Dataset/train_unlabeled.csv",
-        },
-        "train_unlabeled_0": {
-            "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_unlabeled_0.csv",
-        },
-        "train_unlabeled_1": {
-            "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_unlabeled_1.csv",
-        },
-        "train_unlabeled_2": {
-            "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_unlabeled_2.csv",
-        },
-        "train_unlabeled_3": {
-            "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_unlabeled_3.csv",
-        },
-        "train_unlabeled_4": {
-            "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_unlabeled_4.csv",
-        },
-        "train_unlabeled_5": {
-            "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/train_unlabeled_5.csv",
         },
         "val_set": {
             "images_directory": "../Dataset/val_set",
