@@ -34,7 +34,7 @@ class ImageDatastore(Dataset):
     def __init__(self, dataset_type, transform=None, target_transform=None):
         self.images_directory = self.dataset_path[dataset_type]["images_directory"]
         self.labels = pd.read_csv(
-            self.dataset_path[dataset_type]["labels_file"], header=None
+            self.dataset_path[dataset_type]["labels_file"]
         )
         self.transform = transform
         self.target_transform = target_transform

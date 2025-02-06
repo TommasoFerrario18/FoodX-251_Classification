@@ -121,11 +121,13 @@ class CentroidRetrieval(ImageRetrieval):
 
         neigh = NearestNeighbors(n_neighbors=self.k, n_jobs=-1, metric=self.metric)
         neigh.fit(self.feat_unlabeled)
-        range_labels = len(self.feat_small) // 20
+        range_labels = self.df_small['Label'].nunique()
 
         for i in tqdm(range(range_labels)):
-            current_features = self.feat_small[i * 20 : (i + 1) * 20, :]
-            current_label = self.df_small.loc[i * 20, "Label"]
+            indices = self.df_small[self.df_small['Label'] == i].index
+
+            current_features = self.feat_small[indices]
+            current_label = i
             centroid = np.mean(current_features, axis=0)
 
             distances, indices = neigh.kneighbors([centroid])
