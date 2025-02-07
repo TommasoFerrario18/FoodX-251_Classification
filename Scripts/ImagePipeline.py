@@ -2,6 +2,8 @@ import cv2
 import torch
 import numpy as np
 
+from ImageEnhancer import ImageEnhancer
+
 
 class ImagePipeline:
     def __init__(self, model, feature_extractor, preprocessing=True):
@@ -44,31 +46,32 @@ class ImagePipeline:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
 
-        # Initialize sharpened as the original image
-        sharpened = image.copy()
+        # Image enhancement
+        enhancer = ImageEnhancer()
 
         if blur_score < 50:
-            sharpen_kernel = np.array(
-                [[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]]
-            )  # Modified kernel
-            # Apply the kernel to the image
-            sharpened = cv2.filter2D(image, -1, sharpen_kernel)
-            # Ensure pixel values stay in valid range
-            sharpened = np.clip(sharpened, 0, 255).astype(np.uint8)
+            out_image = enhancer.enhance_image(image)
+        elif blur_score > 1000:
+            # out_image = cv2.medianBlur(image, 3)
+            out_image = image
+            for i in range(4):
+                sigma_spatial, sigma_range = enhancer.estimate_bilateral_params(
+                    out_image
+                )
+                out_image = cv2.bilateralFilter(
+                    out_image, 9, sigmaColor=sigma_range, sigmaSpace=sigma_spatial
+                )
+                blur_score = cv2.Laplacian(
+                    cv2.cvtColor(out_image, cv2.COLOR_BGR2GRAY), cv2.CV_64F
+                ).var()
+                if blur_score < 1300:
+                    break
         else:
-            sharpened = image.copy()
-
-        x = cv2.quality.QualityBRISQUE_compute(
-            sharpened,
-            "./../Scripts/Quality/brisque_model_live.yml",
-            "./../Scripts/Quality/brisque_range_live.yml",
-        )[0]
-        print(f"BRISQUE: {score}, Laplacian: {blur_score}")
-        print(f"Image sharpened {x}")
+            out_image = enhancer.neural_enhance(image)
 
         # Convert color space
-        processed_image = cv2.cvtColor(sharpened, cv2.COLOR_BGR2RGB)
-        return processed_image
+        # cv2.cvtColor(out_image, cv2.COLOR_BGR2RGB)
+        return out_image
 
     def extract_features(self, image):
         """Feature extraction from image"""
