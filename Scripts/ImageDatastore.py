@@ -29,6 +29,10 @@ class ImageDatastore(Dataset):
             "images_directory": "../Dataset/val_set_degraded",
             "labels_file": "../Dataset/val_info.csv",
         },
+        "train_augmented": {
+            "images_directory": "../Dataset/train_augmented",
+            "labels_file": "../Dataset/train_augmented.csv",
+        }
     }
 
     def __init__(self, dataset_type, transform=None, target_transform=None):
