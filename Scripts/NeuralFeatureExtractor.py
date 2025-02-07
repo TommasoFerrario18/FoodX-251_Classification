@@ -104,6 +104,18 @@ class NeuralFeatureExtractor:
 
         return final_feat, final_lab
 
+    def compute_features_single_image(self, image: torch.Tensor) -> np.ndarray:
+        """Compute the features for a single image"""
+        image = image.unsqueeze(0).to(self.device)
+        _ = self.model(image)
+
+        if self.features is None:
+            raise ValueError(
+                "No features were captured. Check if the target layer name is correct."
+            )
+
+        return self.features.cpu().numpy()
+
     def _save_features(self, features: np.ndarray, labels: List) -> None:
         """Save the features and labels to the result directory"""
         np.save(
