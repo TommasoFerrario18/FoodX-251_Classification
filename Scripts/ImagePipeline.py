@@ -12,20 +12,23 @@ class ImagePipeline:
         self.feature_extractor = feature_extractor
         self.preprocessing = preprocessing
 
+        # Image enhancement
+        self.enhancer = ImageEnhancer()
+
     def predict(self, image, brisque_threshold=(20, 70)):
         """Predict image label"""
         if self.preprocessing:
             image = self.preprocess(image, brisque_threshold)
 
-        if image == -1:
-            return -1
+        if not isinstance(image, np.ndarray) and image == -1:
+            return None, -1
 
         features = self.extract_features(image)
 
         if isinstance(self.model, torch.nn.Module):
             return self.model(features.to(self.device)).argmax().item()
 
-        return self.model.predict(features)
+        return features, self.model.predict(features)
 
     def preprocess(self, image, brisque_threshold):
         """Image preprocessing"""
@@ -46,16 +49,12 @@ class ImagePipeline:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blur_score = cv2.Laplacian(gray, cv2.CV_64F).var()
 
-        # Image enhancement
-        enhancer = ImageEnhancer()
-
         if blur_score < 50:
-            out_image = enhancer.enhance_image(image)
+            out_image = self.enhancer.enhance_image(image)
         elif blur_score > 1000:
-            # out_image = cv2.medianBlur(image, 3)
             out_image = image
             for i in range(4):
-                sigma_spatial, sigma_range = enhancer.estimate_bilateral_params(
+                sigma_spatial, sigma_range = self.enhancer.estimate_bilateral_params(
                     out_image
                 )
                 out_image = cv2.bilateralFilter(
@@ -67,10 +66,15 @@ class ImagePipeline:
                 if blur_score < 1300:
                     break
         else:
-            out_image = enhancer.neural_enhance(image)
+            out_image = self.enhancer.neural_enhance(image)
 
-        # Convert color space
-        # cv2.cvtColor(out_image, cv2.COLOR_BGR2RGB)
+        # Final check and conversion
+        if out_image is not None and isinstance(out_image, np.ndarray):
+            if out_image.dtype != np.uint8:
+                out_image = (out_image * 255).astype(np.uint8)
+            if out_image.max() <= 1.0:
+                out_image = (out_image * 255).astype(np.uint8)
+
         return out_image
 
     def extract_features(self, image):

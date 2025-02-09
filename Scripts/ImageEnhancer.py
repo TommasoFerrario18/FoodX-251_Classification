@@ -2,21 +2,26 @@ import os
 import cv2
 import torch
 import numpy as np
+import torch_directml
 
 from network_rrdbnet import RRDBNet as net
 
 
 class ImageEnhancer:
-    def denoise_image(self, image):
-        # Non-local means denoising
-        denoised = cv2.fastNlMeansDenoisingColored(image, None, 10, 10, 7, 21)
-        return denoised
+    def __init__(self):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # self.device = torch_directml.device()
+        self.model_path = os.path.join("..", "Scripts", "Models", "BSRGANx2.pth")
+        self.model = net(in_nc=3, out_nc=3, nf=64, nb=23, gc=32, sf=2).to(self.device)
+        self.model.load_state_dict(
+            torch.load(self.model_path, weights_only=True), strict=True
+        )
 
     def estimate_bilateral_params(self, image):
         height, width = image.shape[:2]
         diagonal = np.sqrt(height**2 + width**2)
 
-        # Spatial sigma: 2% of the image diagonal
+        # Spatial sigma: 3% of the image diagonal
         sigma_spatial = diagonal * 0.03
 
         # Range sigma: estimate based on image statistics
@@ -50,31 +55,25 @@ class ImageEnhancer:
         """
         Sharpens image using bilateral filter to preserve edges.
         """
-        # Convert to float32 for calculations
         image_float = image.astype(np.float32) / 255.0
 
-        # Get estimated parameters
         sigma_spatial, sigma_range = self.estimate_bilateral_params(image)
 
-        # Apply bilateral filter with estimated parameters
         smooth = (
             cv2.bilateralFilter(
                 image,
-                d=5,  # Small window size for fine detail preservation
+                d=5,
                 sigmaColor=sigma_range,
                 sigmaSpace=sigma_spatial,
             ).astype(np.float32)
             / 255.0
         )
 
-        # Calculate unsharp mask (original - smoothed)
         unsharp_mask = image_float - smooth
 
-        # Add scaled mask back to original
-        amount = 1.5  # Sharpening strength (adjust as needed)
+        amount = 2.5
         sharpened = image_float + (unsharp_mask * amount)
 
-        # Ensure results stay in valid range
         return np.clip(sharpened * 255, 0, 255).astype(np.uint8)
 
     def adaptive_gamma_correction(self, image):
@@ -85,33 +84,26 @@ class ImageEnhancer:
         return (corrected * 255).astype(np.uint8)
 
     def enhance_image(self, image):
-        # Optional denoising step
-        # denoised = self.denoise_image(image)
+        if image.dtype != np.uint8:
+            image = (image * 255).astype(np.uint8)
 
-        # Apply gamma correction first
         gamma_corrected = self.adaptive_gamma_correction(image)
-
-        # Apply bilateral sharpening
         sharpened = self.bilateral_sharpen(gamma_corrected)
         return sharpened
 
     def neural_enhance(self, image):
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        model_path = os.path.join("..", "Scripts", "Models", "BSRGANx2.pth")
-        model = net(in_nc=3, out_nc=3, nf=64, nb=23, gc=32, sf=2).to(device)
-
-        model.load_state_dict(torch.load(model_path, weights_only=True), strict=True)
-        model.eval()
-        for k, v in model.named_parameters():
+        self.model.eval()
+        for k, v in self.model.named_parameters():
             v.requires_grad = False
-        model = model.to(device)
+        self.model.to(self.device)
         torch.cuda.empty_cache()
 
-        input_image = self._uint2tensor4(image)
+        image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        input_image = self._uint2tensor4(image_rgb)
 
         with torch.no_grad():
             output_image = (
-                model(input_image.to(device))
+                self.model(input_image.to(self.device))
                 .data.squeeze()
                 .float()
                 .cpu()
@@ -119,7 +111,11 @@ class ImageEnhancer:
                 .numpy()
             )
 
-        return np.transpose(output_image, (1, 2, 0))
+        output_image = np.transpose(output_image, (1, 2, 0))
+        output_image = cv2.cvtColor(
+            (output_image * 255).astype(np.uint8), cv2.COLOR_RGB2BGR
+        )
+        return output_image
 
     def _uint2tensor4(self, img):
         if img.ndim == 2:
