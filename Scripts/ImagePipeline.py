@@ -1,3 +1,4 @@
+import os
 import cv2
 import torch
 import numpy as np
@@ -11,6 +12,15 @@ class ImagePipeline:
         self.model = model
         self.feature_extractor = feature_extractor
         self.preprocessing = preprocessing
+        self.brisque_path = os.path.join(
+            "..", "Scripts", "Quality", "brisque_model_live.yml"
+        )
+        self.brisque_range_path = os.path.join(
+            "..", "Scripts", "Quality", "brisque_range_live.yml"
+        )
+        self.brisque_model = cv2.quality.QualityBRISQUE_create(
+            self.brisque_path, self.brisque_range_path
+        )
 
         # Image enhancement
         self.enhancer = ImageEnhancer()
@@ -19,31 +29,27 @@ class ImagePipeline:
         """Predict image label"""
         if self.preprocessing:
             image = self.preprocess(image, brisque_threshold)
-
-        if not isinstance(image, np.ndarray) and image == -1:
-            return None, -1
+            if image is None:
+                return None, -1
 
         features = self.extract_features(image)
 
-        if isinstance(self.model, torch.nn.Module):
-            return self.model(features.to(self.device)).argmax().item()
+        with torch.no_grad():
+            if isinstance(self.model, torch.nn.Module):
+                return features, self.model(features.to(self.device)).argmax().item()
 
         return features, self.model.predict(features)
 
     def preprocess(self, image, brisque_threshold):
         """Image preprocessing"""
         # BRISQUE evaluation
-        score = cv2.quality.QualityBRISQUE_compute(
-            image,
-            "./../Scripts/Quality/brisque_model_live.yml",
-            "./../Scripts/Quality/brisque_range_live.yml",
-        )[0]
+        score = self.brisque_model.compute(image)[0]
 
         if score < brisque_threshold[0]:
             return image
 
         if score > brisque_threshold[1]:
-            return -1
+            return None
 
         # Image to clean
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -53,13 +59,14 @@ class ImagePipeline:
             out_image = self.enhancer.enhance_image(image)
         elif blur_score > 1000:
             out_image = image
-            for i in range(4):
+            for _ in range(4):
                 sigma_spatial, sigma_range = self.enhancer.estimate_bilateral_params(
                     out_image
                 )
                 out_image = cv2.bilateralFilter(
                     out_image, 9, sigmaColor=sigma_range, sigmaSpace=sigma_spatial
                 )
+
                 blur_score = cv2.Laplacian(
                     cv2.cvtColor(out_image, cv2.COLOR_BGR2GRAY), cv2.CV_64F
                 ).var()
@@ -69,11 +76,8 @@ class ImagePipeline:
             out_image = self.enhancer.neural_enhance(image)
 
         # Final check and conversion
-        if out_image is not None and isinstance(out_image, np.ndarray):
-            if out_image.dtype != np.uint8:
-                out_image = (out_image * 255).astype(np.uint8)
-            if out_image.max() <= 1.0:
-                out_image = (out_image * 255).astype(np.uint8)
+        if out_image is not None and out_image.dtype != np.uint8:
+            out_image = np.clip(out_image * 255, 0, 255).astype(np.uint8)
 
         return out_image
 
