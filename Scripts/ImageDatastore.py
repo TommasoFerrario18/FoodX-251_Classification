@@ -2,7 +2,7 @@ import os
 import torch
 import pandas as pd
 
-from torchvision.io import decode_image
+from torchvision.io import read_image
 from torch.utils.data import Dataset
 
 
@@ -29,6 +29,10 @@ class ImageDatastore(Dataset):
             "images_directory": "../Dataset/val_set_degraded",
             "labels_file": "../Dataset/val_info.csv",
         },
+        "val_degradate_clear": {
+            "images_directory": "../Dataset/Preprocessed",
+            "labels_file": "../Dataset/val_deg_process.csv",
+        },
         "train_augmented": {
             "images_directory": "../Dataset/train_augmented",
             "labels_file": "../Dataset/train_augmented.csv",
@@ -48,7 +52,7 @@ class ImageDatastore(Dataset):
 
     def __getitem__(self, idx):
         image_path = os.path.join(self.images_directory, self.labels.iloc[idx, 0])
-        image = decode_image(image_path)
+        image = read_image(image_path)
         image = image.type(torch.float32) / 255.0
         label = self.labels.iloc[idx, 1]
 
