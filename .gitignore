@@ -36,8 +36,11 @@ Thumbs.db
 .ipynb_checkpoints
 
 # Dataset personalizzati
-Dataset/
+Dataset/*
 Features/
 Results/outliers/
 Results/New_Labels/
 Scripts/Models
+
+!Dataset/labels_experiment/
+!Dataset/labels_experiment/**
