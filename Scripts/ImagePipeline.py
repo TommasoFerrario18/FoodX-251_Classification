@@ -2,6 +2,7 @@ import os
 import cv2
 import torch
 import numpy as np
+import pandas as pd
 
 from ImageEnhancer import ImageEnhancer
 
@@ -90,3 +91,39 @@ class ImagePipeline:
             image = torch.from_numpy(image).permute(2, 0, 1).float() / 255.0
 
         return self.feature_extractor.compute_features_single_image(image)
+
+    def format_dashboard_output(self, proba):
+        """Format prediction for dashboard"""
+        class_name = pd.read_csv("class_list.txt", header=None)
+        top_5 = proba.argsort()[-5:][::-1]
+
+        results = []
+        for j in top_5:
+            class_j = class_name.iloc[j, 0].split(" ")
+            results.append((class_j[0], class_j[1], proba[j]))
+
+        return results
+
+    def predict_for_dashboard(
+        self, image_path, preprocessing=False, brisque_threshold=(20, 70)
+    ):
+        """Predict image label for dashboard"""
+        if not os.path.exists(image_path):
+            return None, -1
+
+        image = cv2.imread(image_path)
+
+        if preprocessing:
+            image = self.preprocess(image, brisque_threshold)
+            if image is None:
+                return None, -1
+
+        features = self.extract_features(image)
+
+        with torch.no_grad():
+            if isinstance(self.model, torch.nn.Module):
+                return self.format_dashboard_output(
+                    self.model(features.to(self.device))
+                )
+
+        return self.format_dashboard_output(self.model.predict_proba(features))
