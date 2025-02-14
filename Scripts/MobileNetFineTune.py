@@ -93,7 +93,7 @@ def create_model(model, num_classes):
 
     # Freeze layers
     print("\nFreezing layers:")
-    freeze_until_layer(model, "features.15")
+    freeze_until_layer(model, "features.14")
 
     # Check status after freezing
     check_frozen_status(model)
@@ -196,15 +196,15 @@ if __name__ == "__main__":
     count_parameters_per_layer(model)
     count_parameters(model)
 
-    # # Load the data
-    # dataloaders, image_datasets = load_data(batch_size=512)
+    # Load the data
+    dataloaders, image_datasets = load_data(batch_size=512)
 
-    # # Train the model
-    # model = train_model(model, dataloaders, num_epochs=20, image_datasets=image_datasets)
+    # Train the model
+    model = train_model(model, dataloaders, num_epochs=20, image_datasets=image_datasets)
 
-    # # Save the model
-    # if not os.path.exists("../Model"):
-    #     os.makedirs("../Model")
+    # Save the model
+    if not os.path.exists("../Model"):
+        os.makedirs("../Model")
 
-    # torch.save(model.state_dict(), "../Model/model.pth")
-    # torch.save(model, "../Model/model_full.pth")
+    torch.save(model.state_dict(), "../Model/model.pth")
+    torch.save(model, "../Model/model_full.pth")
