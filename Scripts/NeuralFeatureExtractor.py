@@ -96,10 +96,15 @@ class NeuralFeatureExtractor:
 
 
 class MobileNetFeatureExtractor(NeuralFeatureExtractor):
-    def __init__(self, target_layer: str = "classifier.0", result_file: str = None):
+    def __init__(
+        self,
+        target_layer: str = "classifier.0",
+        result_file: str = None,
+        pretrained: bool = False,
+    ):
         model = mobilenet_v3_large(weights="IMAGENET1K_V2")
         path = os.path.join("..", "Model", "model_full.pth")
-        if os.path.exists(path):
+        if os.path.exists(path) and pretrained:
             model = torch.load(path, weights_only=False)
             print("Model loaded successfully")
         super().__init__(
