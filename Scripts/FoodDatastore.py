@@ -74,7 +74,7 @@ class FoodDatastore(Dataset):
             proposals = proposals[0]
 
             # Use top-k proposals
-            k = min(3, len(proposals))
+            k = min(5, len(proposals))
             for box in proposals[:k]:
                 x1, y1, x2, y2 = box.int()
 
