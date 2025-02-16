@@ -2,7 +2,9 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+from scipy import ndimage
 from sklearn.cluster import KMeans
+from skimage.measure import regionprops
 from sklearn.preprocessing import StandardScaler
 from skimage.feature import local_binary_pattern
 from concurrent.futures import ThreadPoolExecutor
@@ -96,11 +98,13 @@ class ImageSegmentation:
                 segmented[mask] = image[mask]
                 labeled_image[mask] = 255
             else:
-                segmented[mask] = [128, 128, 128]
+                segmented[mask] = [0, 0, 0]
 
-        self.visualize_segmentation(image, segmented, labeled_image)
+        foreground_mask = self.get_foreground_mask(image, labeled_image)
 
-        return segmented, labeled_image
+        self.visualize_segmentation(image, segmented, foreground_mask)
+
+        return segmented, foreground_mask
 
     def visualize_segmentation(self, image, segmented, labeled_image):
         """
@@ -124,3 +128,105 @@ class ImageSegmentation:
 
         plt.tight_layout()
         plt.show()
+
+    def calculate_centroid(self, mask):
+        """
+        Calculate the centroid of a binary mask.
+        """
+        props = regionprops(mask.astype(int))[0]
+        return props.centroid
+
+    def check_border_pixels(self, mask, border_width=1):
+        """
+        Check if the mask touches the image border.
+        """
+        h, w = mask.shape
+        border_mask = np.zeros_like(mask)
+        border_mask[:border_width, :] = 1  # Top
+        border_mask[-border_width:, :] = 1  # Bottom
+        border_mask[:, :border_width] = 1  # Left
+        border_mask[:, -border_width:] = 1  # Right
+
+        return np.any(mask & border_mask)
+
+    def calculate_texture_variance(self, image, mask):
+        """
+        Calculate texture variance using LBP for the masked region.
+        """
+        # Convert to grayscale if needed
+        if len(image.shape) == 3:
+            gray = np.mean(image, axis=2)
+        else:
+            gray = image
+
+        if image.dtype != np.uint8:
+            gray = (gray * 255).astype(np.uint8)
+
+        radius = 3
+        n_points = 8 * radius
+        lbp = local_binary_pattern(gray, n_points, radius, method="uniform")
+
+        # Calculate variance of LBP values in masked region
+        masked_lbp = lbp[mask]
+        if len(masked_lbp) == 0:
+            return 0
+        return np.var(masked_lbp)
+
+    def compute_weighted_score(
+        self, distance_from_center, touches_border, relative_area, texture_variance
+    ):
+        """
+        Compute weighted score for foreground probability.
+        """
+        max_distance = np.sqrt(2)
+        normalized_distance = 1 - (distance_from_center / max_distance)
+
+        weights = {"distance": 0.3, "border": 0.2, "area": 0.2, "texture": 0.3}
+
+        distance_score = normalized_distance * weights["distance"]
+        border_score = (1 - float(touches_border)) * weights["border"]
+
+        area_score = (1 - abs(relative_area - 0.3)) * weights["area"]
+
+        normalized_texture = min(texture_variance / 1000, 1)
+        texture_score = normalized_texture * weights["texture"]
+
+        return distance_score + border_score + area_score + texture_score
+
+    def classify_clusters(self, image, labels):
+        """
+        Classify image clusters into foreground and background.
+
+        """
+        h, w = labels.shape
+        image_center = (h / 2, w / 2)
+        scores = []
+
+        for label in np.unique(labels):
+            mask = labels == label
+
+            # Calculate centroid and its distance from center
+            centroid = self.calculate_centroid(mask)
+            distance_from_center = np.sqrt(
+                (centroid[0] - image_center[0]) ** 2
+                + (centroid[1] - image_center[1]) ** 2
+            )
+
+            touches_border = self.check_border_pixels(mask)
+            relative_area = np.sum(mask) / mask.size
+            texture_variance = self.calculate_texture_variance(image, mask)
+
+            score = self.compute_weighted_score(
+                distance_from_center, touches_border, relative_area, texture_variance
+            )
+
+            scores.append((label, score))
+
+        return max(scores, key=lambda x: x[1])[0]
+
+    def get_foreground_mask(self, image, labels):
+        """
+        Get foreground mask from image and cluster labels.
+        """
+        foreground_label = self.classify_clusters(image, labels)
+        return labels == foreground_label
