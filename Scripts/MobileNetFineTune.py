@@ -111,7 +111,7 @@ def load_data(batch_size):
         ]
     )
 
-    datasets = ImageDatastore("train_retrieval", transform=transform)
+    datasets = ImageDatastore("train_augmented", transform=transform)
     image_datasets = {}
 
     train, val = torch.utils.data.random_split(
@@ -134,11 +134,11 @@ def train_model(model, dataloaders, num_epochs, image_datasets):
     model = model.to(device)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.SGD(
-        model.classifier[3].parameters(), lr=0.001, momentum=0.9
+    optimizer = torch.optim.Adam(
+        filter(lambda p: p.requires_grad, model.parameters()), lr=0.001
     )
 
-    for epoch in tqdm(range(num_epochs)):
+    for epoch in range(num_epochs):
         # print(f"Epoch {epoch}/{num_epochs - 1}")
         # print("-" * 10)
 
@@ -151,7 +151,7 @@ def train_model(model, dataloaders, num_epochs, image_datasets):
             running_loss = 0.0
             running_corrects = 0
 
-            for inputs, labels in dataloaders[phase]:
+            for inputs, labels in tqdm(dataloaders[phase]):
                 inputs = inputs.to(device)
                 labels = labels.to(device)
 
@@ -173,10 +173,10 @@ def train_model(model, dataloaders, num_epochs, image_datasets):
             running_loss += loss.item() * inputs.size(0)
             running_corrects += torch.sum(preds == labels.data)
 
-        epoch_loss = running_loss / len(image_datasets[phase])
-        epoch_acc = running_corrects.double() / len(image_datasets[phase])
+            epoch_loss = running_loss / len(image_datasets[phase])
+            epoch_acc = running_corrects.double() / len(image_datasets[phase])
 
-        print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
+            print(f"{phase} Loss: {epoch_loss:.4f} Acc: {epoch_acc:.4f}")
 
         if not os.path.exists("../Model"):
             os.makedirs("../Model")
@@ -197,14 +197,14 @@ if __name__ == "__main__":
     count_parameters(model)
 
     # Load the data
-    # dataloaders, image_datasets = load_data(batch_size=512)
+    dataloaders, image_datasets = load_data(batch_size=512)
 
-    # # Train the model
-    # model = train_model(model, dataloaders, num_epochs=5, image_datasets=image_datasets)
+    # Train the model
+    model = train_model(model, dataloaders, num_epochs=20, image_datasets=image_datasets)
 
-    # # Save the model
-    # if not os.path.exists("../Model"):
-    #     os.makedirs("../Model")
+    # Save the model
+    if not os.path.exists("../Model"):
+        os.makedirs("../Model")
 
-    # torch.save(model.state_dict(), "../Model/model.pth")
-    # torch.save(model, "../Model/model_full.pth")
+    torch.save(model.state_dict(), "../Model/model.pth")
+    torch.save(model, "../Model/model_full.pth")
