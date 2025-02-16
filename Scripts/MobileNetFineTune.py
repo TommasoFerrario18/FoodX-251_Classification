@@ -93,7 +93,7 @@ def create_model(model, num_classes):
 
     # Freeze layers
     print("\nFreezing layers:")
-    freeze_until_layer(model, "features.14")
+    freeze_until_layer(model, "features.15")
 
     # Check status after freezing
     check_frozen_status(model)
@@ -111,7 +111,7 @@ def load_data(batch_size):
         ]
     )
 
-    datasets = ImageDatastore("train_retrieval", transform=transform)
+    datasets = ImageDatastore("train_augmented", transform=transform)
     image_datasets = {}
 
     train, val = torch.utils.data.random_split(
