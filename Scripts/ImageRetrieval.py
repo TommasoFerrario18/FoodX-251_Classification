@@ -126,7 +126,10 @@ class CentroidRetrieval(ImageRetrieval):
         for i in tqdm(range(range_labels)):
             indices = self.df_small[self.df_small['Label'] == i].index
 
-            current_features = self.feat_small[indices]
+            if len(self.feat_small) == 1:
+                current_features = self.feat_small
+            else:
+                current_features = self.feat_small[indices]
             current_label = i
             centroid = np.mean(current_features, axis=0)
 
