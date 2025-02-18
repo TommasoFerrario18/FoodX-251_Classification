@@ -3,6 +3,7 @@ import cv2
 import torch
 import numpy as np
 import pandas as pd
+from torchvision import transforms
 
 from ImageEnhancer import ImageEnhancer
 
@@ -97,12 +98,12 @@ class ImagePipeline:
     def format_dashboard_output(self, proba):
         """Format prediction for dashboard"""
         class_name = pd.read_csv("class_list.txt", header=None)
-        top_5 = proba.argsort()[-5:][::-1]
+        top_5 = proba[0].argsort()[-5:][::-1]
 
         results = []
         for j in top_5:
             class_j = class_name.iloc[j, 0].split(" ")
-            results.append((class_j[0], class_j[1], proba[j]))
+            results.append((class_j[0], class_j[1], proba[0][j]))
 
         return results
 
@@ -119,8 +120,22 @@ class ImagePipeline:
             image = self.preprocess(image, brisque_threshold)
             if image is None:
                 return None, -1
+            
+        transform = transforms.Compose(
+            [
+                transforms.ToTensor(),
+                transforms.Resize(232, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.Pad(padding=(0, 0, 0, 0), fill=0),
+                transforms.CenterCrop((232, 232)),
+                transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            ]
+        )
+
+        image = transform(image)
 
         features = self.extract_features(image)
+        # reshape numpyarray to 1,length
+        features = features.reshape(1, -1)
 
         with torch.no_grad():
             if isinstance(self.model, torch.nn.Module):

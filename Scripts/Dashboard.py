@@ -12,9 +12,14 @@ from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import dash_bootstrap_components as dbc
 import os
+import torch
+from torchvision.io import read_image
+from sklearn.neighbors import KNeighborsClassifier
 
 from Utils import get_datasets, encode_image
 from ImageRetrieval import CentroidRetrieval
+from NeuralFeatureExtractor import MobileNetFeatureExtractor
+from ImagePipeline import ImagePipeline
 
 print()
 print("Dashboard running")
@@ -24,7 +29,7 @@ df_small, feat_small, df_unlabeled, feat_unlabeled = get_datasets()
 
 image_folder = "..\Images"
 unlabel_folder = "..\Dataset\\train_set"
-image_files = [f for f in os.listdir(image_folder) if f.endswith((".jpg"))][:3]
+image_files = [f for f in os.listdir(image_folder) if f.endswith((".jpg"))]
 image_paths = [os.path.join(image_folder, img) for img in image_files]
 
 external_stylesheets = [dbc.themes.BOOTSTRAP]
@@ -38,7 +43,7 @@ app = dash.Dash(
 navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Classificazione", href="/")),
-        dbc.NavItem(dbc.NavLink("Retrieval preselezionate", href="/page-1")),
+        dbc.NavItem(dbc.NavLink("Retrieval", href="/page-1")),
     ],
     brand="Visual Dashboard",
     brand_href="/",
@@ -46,26 +51,7 @@ navbar = dbc.NavbarSimple(
     dark=True,
 )
 
-retrieval_da_prescelte = html.Div(
-    [
-        html.Div(
-            [
-                html.H3("Immagini selezionate"),
-                html.Div(
-                    id="show-retrieval",
-                    style={
-                        "display": "flex",
-                        "justify-content": "center",
-                        "flex-wrap": "wrap",
-                    },
-                ),
-            ],
-            style={"text-align": "center", "margin-top": "20px"},
-        ),
-        html.H3(
-            "Immagine originale", style={"text-align": "center", "margin-top": "20px"}
-        ),
-        html.Div(
+carosello = html.Div(
             [
                 html.Button(
                     "<",
@@ -93,32 +79,110 @@ retrieval_da_prescelte = html.Div(
                 "align-items": "center",
                 "justify-content": "center",
             },
-        ),
+        )
+
+retrieval_da_prescelte = html.Div(
+    [
         html.Div(
             [
-                html.Button(
-                    "Conferma",
-                    id="confirm-button",
-                    n_clicks=0,
-                    style={"font-size": "20px", "margin-top": "20px"},
-                    className="btn btn-primary btn-lg",
-                )
+                html.Div(
+                    children=[
+                        html.H3(
+                            "Immagine originale", 
+                            style={"text-align": "center", "margin-top": "20px", "margin-bottom": "20px"}
+                        ),
+                        carosello,
+                        html.Button(
+                            "Conferma",
+                            id="confirm-button",
+                            n_clicks=0,
+                            style={"font-size": "20px", "margin-top": "20px"},
+                            className="btn btn-primary btn-lg",
+                        ),
+                    ],
+                    style={"width": "40%", "text-align": "center", "padding": "20px"},
+                ),
+                
+                # Colonna 2: Immagini selezionate
+                html.Div(
+                    children=[
+                        html.H3("Immagini selezionate"),
+                        html.Div(
+                            id="show-retrieval",
+                            style={
+                                "display": "flex",
+                                "justify-content": "center",
+                                "flex-wrap": "wrap",
+                                "width": "100%",
+                            },
+                        ),
+                    ],
+                    style={"width": "60%", "text-align": "center", "padding": "20px"},
+                ),
             ],
-            style={"text-align": "center"},
+            style={
+                "display": "flex",
+                "flexDirection": "row",  # Layout orizzontale per l'immagine e la tabella
+                "justifyContent": "space-between",
+                "gap": "20px",
+                "width": "100%",
+            },
         ),
     ]
 )
 
+
 retrieval_prescelte = html.Div(
     children=[
         html.H1(
-            "Retrieval preselezionato",
+            "Retrieval",
             className="text-center text-primary",
             style={"font-size": "3rem", "font-weight": "bold", "margin-bottom": "20px"},
         ),
         retrieval_da_prescelte,
     ]
 )
+tabella_classificazione = dash.dash_table.DataTable(
+    id="output-table",
+    columns=[
+        {"name": "Posizione", "id": "posizione"},
+        {"name": "ID", "id": "id"},
+        {"name": "Nome", "id": "nome"},
+        {"name": "Probabilità", "id": "probabilita"},
+    ],
+    data=[],
+    style_table={"margin-top": "20px", "width": "60%", "margin-left": "auto", "margin-right": "auto"},
+    style_header={
+        "backgroundColor": "#007bff",
+        "color": "white",
+        "fontWeight": "bold",
+        "textAlign": "center",
+    },
+    style_cell={
+        "textAlign": "center",
+        "padding": "10px",
+        "border": "1px solid #ddd",
+        "fontSize": "16px",
+    },
+    style_data_conditional=[
+        {"if": {"row_index": "odd"}, "backgroundColor": "#f2f2f2"},
+        {"if": {"column_id": "probabilita"}, "color": "#28a745", "fontWeight": "bold"},
+    ],
+)
+
+
+btn_classificazione = html.Div(
+            [
+                html.Button(
+                    "Classifica",
+                    id="classificazione-button",
+                    n_clicks=0,
+                    style={"font-size": "20px", "margin-top": "20px"},
+                    className="btn btn-primary btn-lg",
+                )
+            ],
+            style={"text-align": "center"},
+        )
 
 classificazione = html.Div(
     children=[
@@ -126,9 +190,36 @@ classificazione = html.Div(
             "Classificazione",
             className="text-center text-primary",
             style={"font-size": "3rem", "font-weight": "bold", "margin-bottom": "20px"},
-        )
+        ),
+        html.Div(
+            children=[
+                html.Div(
+                    children=[carosello, btn_classificazione],
+                    style={"width": "50%", "padding": "20px", "textAlign": "center"},
+                ),
+                html.Div(
+                    children=[tabella_classificazione],
+                    style={
+                        "width": "50%",
+                        "padding": "20px",
+                        "backgroundColor": "#f8f9fa",
+                        "borderLeft": "2px solid #007bff",
+                    },
+                ),
+            ],
+            style={
+                "display": "flex",
+                "flexDirection": "row",
+                "justifyContent": "center",
+                "alignItems": "center",
+                "gap": "20px",
+                "width": "100%",
+            },
+        ),
     ]
 )
+
+
 
 app.layout = html.Div(
     children=[
@@ -173,19 +264,19 @@ def update_mini_gallery(n_clicks, selected_image):
 
     if n_clicks > 0:
 
-        df_image = pd.DataFrame({"Image": [selected_image] * 20, "Label": [1] * 20})
+        df_image = pd.DataFrame({"Image": [selected_image], "Label": [0]})
 
-        if selected_image == os.path.join("..", "Images", "train_059364.jpg"):
-            feat_image = feat_small[0:20, :]
-        elif selected_image == os.path.join("..", "Images", "train_089424.jpg"):
-            feat_image = feat_small[20:40, :]
-        else:
-            feat_image = feat_small[250 * 20 : 251 * 20, :]
+        extractor = MobileNetFeatureExtractor()
+
+        torch_image = read_image(selected_image).type(torch.float32).div(255)
+
+        feat_image = [extractor.compute_features_single_image(torch_image)]      
 
         k = 5
         retrieval = CentroidRetrieval(
             df_image, feat_image, df_unlabeled, feat_unlabeled, k=k, metric="cosine"
         )
+
         retrieval.retrieve_images()
 
         df = retrieval.df_unlabeled
@@ -200,6 +291,34 @@ def update_mini_gallery(n_clicks, selected_image):
             )
             for img in image_paths
         ]
+    return []
+
+@app.callback(
+    Output("output-table", "data"),
+    [Input("classificazione-button", "n_clicks")],
+    [State("image-path-store", "data")],
+)
+def classifier(n_clicks, selected_image):
+    if n_clicks > 0:
+
+        x_train = np.load(os.path.join('..', 'Features', 'features', 'train_features_retrieval.npy'))
+        y_train = np.load(os.path.join('..', 'Features', 'labels', 'train_labels_retrieval.npy'))
+
+        model = KNeighborsClassifier(n_neighbors=51, n_jobs=-1, weights='distance', metric='cosine')
+        model.fit(x_train, y_train)
+        
+        extractor = MobileNetFeatureExtractor()
+        classifier = ImagePipeline(model, extractor, preprocessing=False)
+
+        top5 = classifier.predict_for_dashboard(selected_image)
+        
+        table_data = [
+            {"posizione": i + 1, "id": idx, "nome": name, "probabilita": f"{prob:.2f}"}
+            for i, (idx, name, prob) in enumerate(top5)
+        ]
+        
+        return table_data
+
     return []
 
 
