@@ -112,7 +112,7 @@ class ImagePipeline:
     ):
         """Predict image label for dashboard"""
         if not os.path.exists(image_path):
-            return None, -1
+            return None
 
         image = cv2.imread(image_path)
 
@@ -120,7 +120,7 @@ class ImagePipeline:
             print("Preprocessing")
             image = self.preprocess(image, brisque_threshold)
             if image is None:
-                return None, -1
+                return None
             
         transform = transforms.Compose(
             [

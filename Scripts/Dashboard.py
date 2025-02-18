@@ -348,7 +348,7 @@ def combined_classifier(class_n_clicks, clean_n_clicks, selected_image):
 
     # Creazione della tabella
     table_data = [
-        {"posizione": i + 1, "id": idx, "nome": name, "probabilita": f"{prob:.4f}"}
+        {"posizione": i + 1, "id": idx, "nome": name, "probabilita": f"{prob * 100:.2f} %"}
         for i, (idx, name, prob) in enumerate(top5)
     ]
 
