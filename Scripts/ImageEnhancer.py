@@ -69,7 +69,7 @@ class ImageEnhancer:
         return (corrected * 255).astype(np.uint8)
 
     def enhance_image(self, image):
-        image = self.adaptive_gamma_correction(image)
+        # image = self.adaptive_gamma_correction(image)
         return self.bilateral_sharpen(image)
 
     def neural_enhance(self, image):

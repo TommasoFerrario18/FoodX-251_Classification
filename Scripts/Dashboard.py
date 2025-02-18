@@ -15,6 +15,8 @@ import os
 import torch
 from torchvision.io import read_image
 from sklearn.neighbors import KNeighborsClassifier
+import matplotlib.pyplot as plt
+import cv2
 
 from Utils import get_datasets, encode_image
 from ImageRetrieval import CentroidRetrieval
@@ -27,7 +29,7 @@ print()
 
 df_small, feat_small, df_unlabeled, feat_unlabeled = get_datasets()
 
-image_folder = "..\Images"
+image_folder = "..\Images\Dashboard"
 unlabel_folder = "..\Dataset\\train_set"
 image_files = [f for f in os.listdir(image_folder) if f.endswith((".jpg"))]
 image_paths = [os.path.join(image_folder, img) for img in image_files]
@@ -44,6 +46,7 @@ navbar = dbc.NavbarSimple(
     children=[
         dbc.NavItem(dbc.NavLink("Classificazione", href="/")),
         dbc.NavItem(dbc.NavLink("Retrieval", href="/page-1")),
+        dbc.NavItem(dbc.NavLink("Pulizia", href="/page-2")),
     ],
     brand="Visual Dashboard",
     brand_href="/",
@@ -53,33 +56,71 @@ navbar = dbc.NavbarSimple(
 
 carosello = html.Div(
     [
+        # Freccia sinistra
         html.Button(
             "<",
             id="prev-button",
             n_clicks=0,
-            style={"font-size": "20px", "margin": "10px"},
+            style={
+                "font-size": "20px",
+                "position": "absolute",
+                "left": "5px",  # Fissa la posizione a sinistra
+                "top": "50%",  # Centra verticalmente
+                "transform": "translateY(-50%)",  # Allinea perfettamente
+                "z-index": "10",
+            },
             className="btn btn-primary btn-lg",
         ),
-        html.Img(
-            id="image-display",
-            src=encode_image(image_paths[0]),
-            style={"width": "400px", "height": "auto"},
+
+        # Contenitore per l'immagine
+        html.Div(
+            html.Img(
+                id="image-display",
+                src=encode_image(image_paths[0]),
+                style={
+                    "max-width": "400px",  # Massima larghezza
+                    "max-height": "400px",  # Massima altezza
+                    "object-fit": "contain",  # Mantiene le proporzioni senza tagliare
+                },
+            ),
+            style={
+                "width": "400px",  # Stessa larghezza dell'immagine
+                "height": "400px",
+                "display": "flex",
+                "justify-content": "center",
+                "align-items": "center",
+                "position": "relative",
+            },
         ),
-        dcc.Store(id="image-path-store", data=image_paths[0]),
+
+        # Freccia destra
         html.Button(
             ">",
             id="next-button",
             n_clicks=0,
-            style={"font-size": "20px", "margin": "10px"},
+            style={
+                "font-size": "20px",
+                "position": "absolute",
+                "right": "5px",  # Fissa la posizione a destra
+                "top": "50%",  # Centra verticalmente
+                "transform": "translateY(-50%)",
+                "z-index": "10",
+            },
             className="btn btn-primary btn-lg",
         ),
+
+        # Store per il percorso dell'immagine
+        dcc.Store(id="image-path-store", data=image_paths[0]),
     ],
     style={
         "display": "flex",
         "align-items": "center",
         "justify-content": "center",
+        "position": "relative",  # Permette il posizionamento assoluto delle frecce
+        "width": "450px",  # Assicura che le frecce rimangano dentro il carosello
     },
 )
+
 
 retrieval_da_prescelte = html.Div(
     [
@@ -190,13 +231,21 @@ btn_classificazione = html.Div(
         ),
         html.Button(
             "Pulisci e Classifica",
-            id="clean-button",
+            id="clean-classify-button",
             n_clicks=0,
             style={"font-size": "20px", "margin-top": "20px", "margin-left": "20px"},
             className="btn btn-primary btn-lg",
         ),
     ],
-    style={"text-align": "center"},
+    style={"text-align": "center", "margin-left": "-150px"},
+)
+
+btn_pulisci = html.Button(
+    "Pulisci",
+    id="clean-button",
+    n_clicks=0,
+    style={"font-size": "20px", "margin-top": "20px", "margin-left": "-100px"},
+    className="btn btn-primary btn-lg",
 )
 
 
@@ -249,6 +298,50 @@ app.layout = html.Div(
     ]
 )
 
+pulizia = html.Div(
+    children=[
+        html.H1(
+            "Pulizia tramite pipeline",
+            className="text-center text-primary",
+            style={"font-size": "3rem", "font-weight": "bold", "margin-bottom": "20px"},
+        ),
+        html.Div(
+            children=[
+                html.Div(
+                    children=[carosello, btn_pulisci],
+                    style={"width": "50%", "padding": "20px", "textAlign": "center"},
+                ),
+                html.Div(
+                    children=[
+                        html.Div(
+                            id="show-pulizia",
+                            style={
+                                "display": "flex",
+                                "justify-content": "center",
+                                "flex-wrap": "wrap",
+                                "width": "100%",
+                            },
+                        )
+                    ],
+                    style={
+                        "width": "50%",
+                        "padding": "20px",
+                    },
+                ),
+            ],
+            style={
+                "display": "flex",
+                "flexDirection": "row",
+                "justifyContent": "center",
+                "alignItems": "center",
+                "gap": "20px",
+                "width": "100%",
+            },
+        ),
+    ]
+    
+)
+
 
 @app.callback(
     dash.dependencies.Output("page-content", "children"),
@@ -257,6 +350,8 @@ app.layout = html.Div(
 def display_page(pathname):
     if pathname == "/page-1":
         return retrieval_prescelte
+    if pathname == "/page-2":
+        return pulizia
     else:
         return classificazione
 
@@ -311,7 +406,7 @@ def update_mini_gallery(n_clicks, selected_image):
 
 @app.callback(
     Output("output-table", "data"),
-    [Input("classificazione-button", "n_clicks"), Input("clean-button", "n_clicks")],
+    [Input("classificazione-button", "n_clicks"), Input("clean-classify-button", "n_clicks")],
     [State("image-path-store", "data")],
 )
 def combined_classifier(class_n_clicks, clean_n_clicks, selected_image):
@@ -321,7 +416,7 @@ def combined_classifier(class_n_clicks, clean_n_clicks, selected_image):
 
     triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-    if triggered_id not in ["classificazione-button", "clean-button"]:
+    if triggered_id not in ["classificazione-button", "clean-classify-button"]:
         return []
 
     # Caricamento dei dati
@@ -338,13 +433,13 @@ def combined_classifier(class_n_clicks, clean_n_clicks, selected_image):
     model.fit(x_train, y_train)
 
     extractor = MobileNetFeatureExtractor()
-    preprocessing = triggered_id == "clean-button"
+    preprocessing = triggered_id == "clean-classify-button"
 
     classifier = ImagePipeline(model, extractor, preprocessing=False)
     top5 = classifier.predict_for_dashboard(selected_image, preprocessing=preprocessing)
 
     if top5 is None:
-        return []
+        return [{"posizione": "1", "id": "-1", "nome": "Unknown", "probabilita": "100%"}]
 
     # Creazione della tabella
     table_data = [
@@ -353,6 +448,61 @@ def combined_classifier(class_n_clicks, clean_n_clicks, selected_image):
     ]
 
     return table_data
+
+@app.callback(
+    Output("show-pulizia", "children"),
+    [Input("clean-button", "n_clicks")],
+    [State("image-path-store", "data")],
+)
+def pulisciImmagine(n_clicks, selected_image):
+    if n_clicks > 0:
+        cleaned_image_path = os.path.join("..\Images", "tmp.jpg")
+        img_not_processed_path = os.path.join("..\Images", "teapot.jpg")
+
+        x_train = np.load(
+            os.path.join("..", "Features", "features", "train_features_retrieval.npy")
+        )
+        y_train = np.load(
+            os.path.join("..", "Features", "labels", "train_labels_retrieval.npy")
+        )
+
+        model = KNeighborsClassifier(
+            n_neighbors=51, n_jobs=-1, weights="distance", metric="cosine"
+        )
+        model.fit(x_train, y_train)
+        extractor = MobileNetFeatureExtractor()
+
+        classifier = ImagePipeline(model, extractor, preprocessing=False)
+
+        image = cv2.imread(selected_image)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        cleaned_image = classifier.preprocess(image, (20, 70))
+
+        if cleaned_image is None:
+            return [
+                html.Img(
+                    src=encode_image(img_not_processed_path),
+                    style={"margin": "5px"},
+                )
+            ]
+        
+        cleaned_image = cv2.cvtColor(cleaned_image, cv2.COLOR_RGB2BGR)
+
+        cv2.imwrite(cleaned_image_path, cleaned_image)
+
+        return [
+            html.Img(
+                src=encode_image(cleaned_image_path),
+                style={
+                    "max-width": "100%",  # Larghezza massima rispetto al contenitore
+                    "max-height": "100%",  # Altezza massima rispetto al contenitore
+                    "object-fit": "contain",  # Mantiene le proporzioni senza ritagliare
+                    "margin": "5px",  # Margine attorno all'immagine
+                }
+
+            )
+        ]
+    return []
 
 
 if __name__ == "__main__":
