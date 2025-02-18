@@ -52,34 +52,34 @@ navbar = dbc.NavbarSimple(
 )
 
 carosello = html.Div(
-            [
-                html.Button(
-                    "<",
-                    id="prev-button",
-                    n_clicks=0,
-                    style={"font-size": "20px", "margin": "10px"},
-                    className="btn btn-primary btn-lg",
-                ),
-                html.Img(
-                    id="image-display",
-                    src=encode_image(image_paths[0]),
-                    style={"width": "400px", "height": "auto"},
-                ),
-                dcc.Store(id="image-path-store", data=image_paths[0]),
-                html.Button(
-                    ">",
-                    id="next-button",
-                    n_clicks=0,
-                    style={"font-size": "20px", "margin": "10px"},
-                    className="btn btn-primary btn-lg",
-                ),
-            ],
-            style={
-                "display": "flex",
-                "align-items": "center",
-                "justify-content": "center",
-            },
-        )
+    [
+        html.Button(
+            "<",
+            id="prev-button",
+            n_clicks=0,
+            style={"font-size": "20px", "margin": "10px"},
+            className="btn btn-primary btn-lg",
+        ),
+        html.Img(
+            id="image-display",
+            src=encode_image(image_paths[0]),
+            style={"width": "400px", "height": "auto"},
+        ),
+        dcc.Store(id="image-path-store", data=image_paths[0]),
+        html.Button(
+            ">",
+            id="next-button",
+            n_clicks=0,
+            style={"font-size": "20px", "margin": "10px"},
+            className="btn btn-primary btn-lg",
+        ),
+    ],
+    style={
+        "display": "flex",
+        "align-items": "center",
+        "justify-content": "center",
+    },
+)
 
 retrieval_da_prescelte = html.Div(
     [
@@ -88,8 +88,12 @@ retrieval_da_prescelte = html.Div(
                 html.Div(
                     children=[
                         html.H3(
-                            "Immagine originale", 
-                            style={"text-align": "center", "margin-top": "20px", "margin-bottom": "20px"}
+                            "Immagine originale",
+                            style={
+                                "text-align": "center",
+                                "margin-top": "20px",
+                                "margin-bottom": "20px",
+                            },
                         ),
                         carosello,
                         html.Button(
@@ -102,7 +106,6 @@ retrieval_da_prescelte = html.Div(
                     ],
                     style={"width": "40%", "text-align": "center", "padding": "20px"},
                 ),
-                
                 # Colonna 2: Immagini selezionate
                 html.Div(
                     children=[
@@ -151,7 +154,12 @@ tabella_classificazione = dash.dash_table.DataTable(
         {"name": "Probabilità", "id": "probabilita"},
     ],
     data=[],
-    style_table={"margin-top": "20px", "width": "60%", "margin-left": "auto", "margin-right": "auto"},
+    style_table={
+        "margin-top": "20px",
+        "width": "60%",
+        "margin-left": "auto",
+        "margin-right": "auto",
+    },
     style_header={
         "backgroundColor": "#007bff",
         "color": "white",
@@ -172,17 +180,25 @@ tabella_classificazione = dash.dash_table.DataTable(
 
 
 btn_classificazione = html.Div(
-            [
-                html.Button(
-                    "Classifica",
-                    id="classificazione-button",
-                    n_clicks=0,
-                    style={"font-size": "20px", "margin-top": "20px"},
-                    className="btn btn-primary btn-lg",
-                )
-            ],
-            style={"text-align": "center"},
-        )
+    [
+        html.Button(
+            "Classifica",
+            id="classificazione-button",
+            n_clicks=0,
+            style={"font-size": "20px", "margin-top": "20px"},
+            className="btn btn-primary btn-lg",
+        ),
+        html.Button(
+            "Pulisci e Classifica",
+            id="clean-button",
+            n_clicks=0,
+            style={"font-size": "20px", "margin-top": "20px", "margin-left": "20px"},
+            className="btn btn-primary btn-lg",
+        ),
+    ],
+    style={"text-align": "center"},
+)
+
 
 classificazione = html.Div(
     children=[
@@ -218,7 +234,6 @@ classificazione = html.Div(
         ),
     ]
 )
-
 
 
 app.layout = html.Div(
@@ -270,7 +285,7 @@ def update_mini_gallery(n_clicks, selected_image):
 
         torch_image = read_image(selected_image).type(torch.float32).div(255)
 
-        feat_image = [extractor.compute_features_single_image(torch_image)]      
+        feat_image = [extractor.compute_features_single_image(torch_image)]
 
         k = 5
         retrieval = CentroidRetrieval(
@@ -293,33 +308,51 @@ def update_mini_gallery(n_clicks, selected_image):
         ]
     return []
 
+
 @app.callback(
     Output("output-table", "data"),
-    [Input("classificazione-button", "n_clicks")],
+    [Input("classificazione-button", "n_clicks"), Input("clean-button", "n_clicks")],
     [State("image-path-store", "data")],
 )
-def classifier(n_clicks, selected_image):
-    if n_clicks > 0:
+def combined_classifier(class_n_clicks, clean_n_clicks, selected_image):
+    ctx = dash.callback_context
+    if not ctx.triggered:
+        return []
 
-        x_train = np.load(os.path.join('..', 'Features', 'features', 'train_features_retrieval.npy'))
-        y_train = np.load(os.path.join('..', 'Features', 'labels', 'train_labels_retrieval.npy'))
+    triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
-        model = KNeighborsClassifier(n_neighbors=51, n_jobs=-1, weights='distance', metric='cosine')
-        model.fit(x_train, y_train)
-        
-        extractor = MobileNetFeatureExtractor()
-        classifier = ImagePipeline(model, extractor, preprocessing=False)
+    if triggered_id not in ["classificazione-button", "clean-button"]:
+        return []
 
-        top5 = classifier.predict_for_dashboard(selected_image)
-        
-        table_data = [
-            {"posizione": i + 1, "id": idx, "nome": name, "probabilita": f"{prob:.2f}"}
-            for i, (idx, name, prob) in enumerate(top5)
-        ]
-        
-        return table_data
+    # Caricamento dei dati
+    x_train = np.load(
+        os.path.join("..", "Features", "features", "train_features_retrieval.npy")
+    )
+    y_train = np.load(
+        os.path.join("..", "Features", "labels", "train_labels_retrieval.npy")
+    )
 
-    return []
+    model = KNeighborsClassifier(
+        n_neighbors=51, n_jobs=-1, weights="distance", metric="cosine"
+    )
+    model.fit(x_train, y_train)
+
+    extractor = MobileNetFeatureExtractor()
+    preprocessing = triggered_id == "clean-button"
+
+    classifier = ImagePipeline(model, extractor, preprocessing=False)
+    top5 = classifier.predict_for_dashboard(selected_image, preprocessing=preprocessing)
+
+    if top5 is None:
+        return []
+
+    # Creazione della tabella
+    table_data = [
+        {"posizione": i + 1, "id": idx, "nome": name, "probabilita": f"{prob:.4f}"}
+        for i, (idx, name, prob) in enumerate(top5)
+    ]
+
+    return table_data
 
 
 if __name__ == "__main__":

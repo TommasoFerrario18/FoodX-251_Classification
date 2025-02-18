@@ -117,6 +117,7 @@ class ImagePipeline:
         image = cv2.imread(image_path)
 
         if preprocessing:
+            print("Preprocessing")
             image = self.preprocess(image, brisque_threshold)
             if image is None:
                 return None, -1
