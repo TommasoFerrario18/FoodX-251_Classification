@@ -19,7 +19,7 @@ class ImageDatastore(Dataset):
         },
         "train_unlabeled": {
             "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/labels_experiment/train_retrieval_k25_with_outlier_removal.csv",
+            "labels_file": "../Dataset/labels_experiment/train_retrieval_k25_centroid.csv",
         },
         "val_set": {
             "images_directory": "../Dataset/val_set",
@@ -34,16 +34,14 @@ class ImageDatastore(Dataset):
             "labels_file": "../Dataset/val_deg_process.csv",
         },
         "train_augmented": {
-            "images_directory": "../Dataset/train_augmented",
+            "images_directory": "../Dataset/train_augmented_2_retrieval",
             "labels_file": "../Dataset/train_augmented.csv",
-        }
+        },
     }
 
     def __init__(self, dataset_type, transform=None, target_transform=None):
         self.images_directory = self.dataset_path[dataset_type]["images_directory"]
-        self.labels = pd.read_csv(
-            self.dataset_path[dataset_type]["labels_file"]
-        )
+        self.labels = pd.read_csv(self.dataset_path[dataset_type]["labels_file"])
         self.transform = transform
         self.target_transform = target_transform
 

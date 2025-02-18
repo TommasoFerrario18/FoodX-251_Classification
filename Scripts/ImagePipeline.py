@@ -58,9 +58,11 @@ class ImagePipeline:
 
         if blur_score < 50:
             out_image = self.enhancer.enhance_image(image)
+            for i in range(2):
+                out_image = self.enhancer.enhance_image(out_image)
         elif blur_score > 1000:
             out_image = image
-            for _ in range(4):
+            for _ in range(6):
                 sigma_spatial, sigma_range = self.enhancer.estimate_bilateral_params(
                     out_image
                 )

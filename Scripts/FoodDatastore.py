@@ -21,7 +21,7 @@ class FoodDatastore(Dataset):
         },
         "train_unlabeled": {
             "images_directory": "../Dataset/train_set",
-            "labels_file": "../Dataset/labels_experiment/train_retrieval_k25_with_outlier_removal.csv",
+            "labels_file": "../Dataset/labels_experiment/train_retrieval_k25_centroid.csv",
         },
         "val_set": {
             "images_directory": "../Dataset/val_set",
